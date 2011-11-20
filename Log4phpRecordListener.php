@@ -38,7 +38,7 @@ class Log4phpRecordListener implements BuildListener {
      */
     private static $instance = null;
     
-    private $target = null;
+    private $targets = array();
     
     private $listening = false;
     
@@ -91,9 +91,7 @@ class Log4phpRecordListener implements BuildListener {
      *
      * @param BuildEvent The BuildEvent
      */
-    function buildStarted(BuildEvent $event) {
-        $this->rootLogger->info($event->getMessage());
-    }
+    public function buildStarted(BuildEvent $event) { }
 
     /**
      * Fired after the last target has finished.
@@ -101,7 +99,7 @@ class Log4phpRecordListener implements BuildListener {
      * @param BuildEvent The BuildEvent
      * @see BuildEvent::getException()
      */
-    function buildFinished(BuildEvent $event) { }
+    public function buildFinished(BuildEvent $event) { }
 
     /**
      * Fired when a target is started.
@@ -109,7 +107,7 @@ class Log4phpRecordListener implements BuildListener {
      * @param BuildEvent The BuildEvent
      * @see BuildEvent::getTarget()
      */
-    function targetStarted(BuildEvent $event) { }
+    public function targetStarted(BuildEvent $event) { }
 
     /**
      * Fired when a target has finished.
@@ -117,7 +115,7 @@ class Log4phpRecordListener implements BuildListener {
      * @param BuildEvent The BuildEvent
      * @see BuildEvent#getException()
      */
-    public function targetFinished(BuildEvent $event) {print('Target zuende');
+    public function targetFinished(BuildEvent $event) {
         if (!$target = $event->getTarget()) {
             return;
         }
@@ -133,13 +131,12 @@ class Log4phpRecordListener implements BuildListener {
         $this->events = array();
     }
     
-    private function findEventsForLog(Target $target) {
-        if (null === $this->start && null === $this->stop) {
-            return array();
-        }
-        
-        if (null !== $this->stop && null !== $this->start) {
-            return $this->events;
+    private function findEventsForLog(Target $target) {       
+        $targetName = $target->getName();
+        if (array_key_exists($targetName, $this->events)) {
+            var_dump(count($this->events[$targetName]));
+            
+            return $this->events[$targetName];
         }
 
         return array();
@@ -160,18 +157,25 @@ class Log4phpRecordListener implements BuildListener {
      *  @param BuildEvent The BuildEvent
      *  @see BuildEvent::getException()
      */
-    function taskFinished(BuildEvent $event) { 
+    public function taskFinished(BuildEvent $event) { 
        if ($task = $event->getTask()) {
+            if (!$targetOfTask = $event->getTarget()) {
+                return;
+            }
+
+            $targetName = $targetOfTask->getName();
             if ($this->startRecording($task)) {
-                $this->start = $task;
+                if (!array_key_exists($targetName, $this->targets)) {
+                    $this->targets[$targetName][] = Log4phpRecordTask::START;        
+                }
             }
             
-            if ($this->startRecording($task)) {
-                $this->stop = $task;
+            if ($this->startRecording($task) === false) {
+                $this->targets[$targetName][] = Log4phpRecordTask::STOP;
             }
             
-            if ($this->target === null && $targetOfTarget = $event->getTarget()) {
-                $this->target = $targetOfTarget;
+            if ($targetOfTask instanceof Target && !array_key_exists($targetName, $this->events)) {
+                $this->events[$targetName] = array();
             }
         }    
     
@@ -184,31 +188,44 @@ class Log4phpRecordListener implements BuildListener {
      *  @see BuildEvent::getMessage()
      */
     public function messageLogged(BuildEvent $event) {
-        if ($this->stillRecording() && !in_array($event, $this->events)) {
-            if ($this->needsRecording($event)) {
-                $this->events[] = $event;            
+        if (!$target = $event->getTarget()) {
+            return;
+        }
+        
+        if ($this->stillRecording($target)) {
+            $targetName = $target->getName();
+            if ($this->needsRecording($event) && array_key_exists($targetName, $this->events)) {
+                $this->events[$targetName][] = $event;            
             }
         }    
     }  
     
     private function needsRecording(BuildEvent $event) {
-        return $event->getTarget() == $this->target && $event->getPriority() == 2;
+        return $event->getPriority() == 2;
     }
     
-    private function stillRecording() {
-        return $this->start !== null && $this->stop === null;
+    private function stillRecording(Target $target) {
+        $targetName = $target->getName();
+
+        return array_key_exists($targetName, $this->targets) && 
+               in_array(Log4phpRecordTask::START, $this->targets[$targetName]) && 
+               !in_array(Log4phpRecordTask::STOP, $this->targets[$targetName]);
     }
     
     public function getEvents() {
         return $this->events;
     }
     
-    private function startRecording($task) {
-        if ($task instanceof Log4phpRecordTask && $task->getAction() == 'stop') {
+    public function getTargets() {
+        return $this->targets;
+    }
+    
+    private function startRecording(Task $task) {
+        if ($task instanceof Log4phpRecordTask && $task->getAction() == Log4phpRecordTask::STOP) {
             return false;
         }
         
-        if ($task instanceof Log4phpRecordTask && $task->getAction() == 'start') {
+        if ($task instanceof Log4phpRecordTask && $task->getAction() == Log4phpRecordTask::START) {
             return true;
         }
     }

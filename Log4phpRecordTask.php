@@ -7,9 +7,12 @@ require_once "phing/tasks/log4php/Log4phpRecordListener.php";
 class Log4phpRecordTask extends Task {
     private $file;
     
-    private $action = 'start';
+    private $action = self::START;
     
     private $logLevel = 'info';
+    
+    const STOP = 'stop';
+    const START = 'start';
     
     public function init() {
         $recordListener = Log4phpRecordListener::getInstance();
