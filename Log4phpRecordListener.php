@@ -139,19 +139,21 @@ class Log4phpRecordListener implements BuildListener {
                 return;
             }
 
-            $targetName = $targetOfTask->getName();
-            if ($task instanceof Log4phpRecordTask) {
-                $this->targets[$targetName][] = $task;        
+            if (!$task instanceof Log4phpRecordTask) {
+                return;
             }
             
-            
-            if ($targetOfTask instanceof Target && !array_key_exists($targetName, $this->events)) {
-                $this->events[$targetName] = array();
+            if (!$this->stillRecording($targetOfTask) || $task->isStop()) {
+                $targetName = $targetOfTask->getName();
+                $this->targets[$targetName][] = $task;        
+                
+                if ($targetOfTask instanceof Target && !array_key_exists($targetName, $this->events)) {
+                    $this->events[$targetName] = array();
+                }
             }
         }    
-    
     }
-
+    
     /**
      *  Fired whenever a message is logged.
      *
