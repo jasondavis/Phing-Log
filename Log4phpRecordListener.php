@@ -47,33 +47,16 @@ class Log4phpRecordListener implements BuildListener {
         $this->logFile = $file;
     }
     
-    /**
-     * Fired before any targets are started.
-     *
-     * @param BuildEvent The BuildEvent
-     */
     public function buildStarted(BuildEvent $event) { }
 
-    /**
-     * Fired after the last target has finished.
-     *
-     * @param BuildEvent The BuildEvent
-     * @see BuildEvent::getException()
-     */
     public function buildFinished(BuildEvent $event) { }
 
-    /**
-     * Fired when a target is started.
-     *
-     * @param BuildEvent The BuildEvent
-     * @see BuildEvent::getTarget()
-     */
     public function targetStarted(BuildEvent $event) { }
 
     /**
-     * Fired when a target has finished.
+     * logs all messages of this target
      *
-     * @param BuildEvent The BuildEvent
+     * @param BuildEvent $event
      * @see BuildEvent#getException()
      */
     public function targetFinished(BuildEvent $event) {
@@ -122,19 +105,12 @@ class Log4phpRecordListener implements BuildListener {
         return array();
     }
 
-    /**
-     * Fired when a task is started.
-     *
-     * @param BuildEvent The BuildEvent
-     * @see BuildEvent::getTask()
-     */
     public function taskStarted(BuildEvent $event) { }
-    
 
     /**
-     *  Fired when a task has finished.
+     *  adds the start/stop record tasks 
      *
-     *  @param BuildEvent The BuildEvent
+     *  @param BuildEvent $event
      *  @see BuildEvent::getException()
      */
     public function taskFinished(BuildEvent $event) { 
@@ -159,9 +135,9 @@ class Log4phpRecordListener implements BuildListener {
     }
     
     /**
-     *  Fired whenever a message is logged.
+     *  adds for the current target a log-message if the recording is started/event has the correct priority
      *
-     *  @param BuildEvent The BuildEvent
+     *  @param BuildEvent $event
      *  @see BuildEvent::getMessage()
      */
     public function messageLogged(BuildEvent $event) {
@@ -202,22 +178,17 @@ class Log4phpRecordListener implements BuildListener {
         return $started && !$stoped;
     }
     
+    /**
+     * @return array 
+     */
     public function getEvents() {
         return $this->events;
     }
     
+    /**
+     * @return array 
+     */
     public function getTargets() {
         return $this->targets;
     }
-    
-    private function startRecording(Task $task) {
-        if ($task instanceof Log4phpRecordTask && $task->isStop()) {
-            return false;
-        }
-        
-        if ($task instanceof Log4phpRecordTask && $task->isStart()) {
-            return true;
-        }
-    }
-
 }
