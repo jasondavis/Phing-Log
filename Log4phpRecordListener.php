@@ -89,15 +89,19 @@ class Log4phpRecordListener implements BuildListener {
                     $startTask->addMessage($event); 
                 }
             }
-        }
         
-        $startTask->log();
+            $startTask->log();
+        }
         
         $this->events = array();
     }
     
     private function getStartRecordTask(Target $target) {
         $tasks = $this->targets[$target->getName()];
+        
+        if (!is_array($tasks)) {
+            return null;
+        }
         
         foreach ($tasks as $task) {
             if ($task->isStart()) {
